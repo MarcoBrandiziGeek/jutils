@@ -1,7 +1,6 @@
 package uk.ac.ebi.utils.opt.runcontrol;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -11,15 +10,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.mutable.Mutable;
-import org.apache.commons.lang3.mutable.MutableInt;
 import org.junit.Test;
 
 import reactor.core.publisher.ParallelFlux;
 import uk.ac.ebi.utils.opt.runcontrol.ReactorUtils.ParallelBatchFluxBuilder;
 
 /**
- * TODO: comment me!
  *
  * @author Marco Brandizi
  * <dl><dt>Date:</dt><dd>29 Jun 2024</dd></dl>
@@ -69,30 +65,4 @@ public class ReactorUtilsTest
 		// Usual Gauss formula for Sum (1..n)
 		assertEquals ( "Result isn't as expected!", max * (max - 1) / 2, sum.get () );
 	}
-	
-	
-	@Test
-	public void testBatchProcessingWithVisitor ()
-	{
-		int max = 1000;
-		
-		Stream<Integer> strm = IntStream.range ( 0, max )
-		.mapToObj ( Integer::valueOf );
-		
-		
-		AtomicInteger sum = new AtomicInteger ();
-		
-		MutableInt parallelism = new MutableInt ( 0 );
-		
-		ReactorUtils.parallelBatchFlux ( 
-			strm,
-			builder -> parallelism.setValue ( builder.getParallelism () )
-		)
-		.doOnNext ( b -> sum.addAndGet ( b.stream ().mapToInt ( Integer::intValue ).sum () ) )
-		.sequential ()
-		.blockLast ();
-		
-		assertEquals ( "Result isn't as expected!", max * (max - 1) / 2, sum.get () );
-		assertTrue ( "parallelism wasn't retrieved from the builder!", parallelism.getValue () > 0 );
-	}	
 }

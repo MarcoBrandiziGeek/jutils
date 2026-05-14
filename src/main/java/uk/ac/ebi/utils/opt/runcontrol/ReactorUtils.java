@@ -51,7 +51,6 @@ public class ReactorUtils
 		 */
 		public static final int DEFAULT_BATCH_SIZE = 2500;
 
-		
 		private Flux<T> flux;
 		private int parallelism = Schedulers.DEFAULT_POOL_SIZE,
 			parallelismPreFetch = Queues.SMALL_BUFFER_SIZE;
@@ -59,6 +58,15 @@ public class ReactorUtils
 		private int batchSize = DEFAULT_BATCH_SIZE;
 		private Supplier<B> batchSupplier;
 		
+		/**
+		 * This requires that you set a source later, via some {@code withSource()} method.
+		 * Else, #build() will raise an error.
+		 */
+		public ParallelBatchFluxBuilder ()
+		{
+			// Nothing to do
+		}
+
 		@SuppressWarnings ( "unchecked" )
 		public ParallelBatchFluxBuilder ( Flux<? extends T> flux )
 		{
@@ -74,7 +82,25 @@ public class ReactorUtils
 		{
 			this ( collection.stream () );
 		}
-				
+
+		@SuppressWarnings ( "unchecked" )
+		public ParallelBatchFluxBuilder<T, B> withSource ( Flux<? extends T> flux )
+		{
+			this.flux = (Flux<T>) flux;
+			return this;
+		}
+		
+		public ParallelBatchFluxBuilder<T, B> withSource ( Stream<? extends T> stream )
+		{
+			return withSource ( Flux.fromStream ( stream ) );
+		}
+		
+		public ParallelBatchFluxBuilder<T, B> withSource ( Collection<? extends T> collection )
+		{
+			return withSource ( collection.stream () );
+		}
+		
+		
 		/**
 		 * The degree of parallelism of the resulting flux. This is passed to 
 		 * {@link Flux#parallel(int, int)}. Defaults to {@link Schedulers#DEFAULT_POOL_SIZE}, as
@@ -128,15 +154,9 @@ public class ReactorUtils
 			return this;
 		}
 		
-		
 		public int getParallelism ()
 		{
 			return parallelism;
-		}
-
-		public void setParallelism ( int parallelism )
-		{
-			this.parallelism = parallelism;
 		}
 
 		public int getParallelismPreFetch ()
@@ -159,88 +179,48 @@ public class ReactorUtils
 			return batchSupplier;
 		}
 		
-		/**
-		 * @param visitor if non-null, I'll call it with myself before creating the result. This can be
-		 * used to inspect a builder during the build process, eg, to get info like 
-		 * {@link ParallelBatchFluxBuilder#getBatchSize() the default batch size}, to be used later by
-		 * your invoker.
-		 *
-		 * TODO: Review, it was used once in KnetMiner API, but not sure it's really useful.
-		 */
-		public ParallelFlux<B> build ( Consumer<ParallelBatchFluxBuilder<? super T, ? super B>> visitor )
+		public ParallelFlux<B> build ()
 		{
+			if ( flux == null ) throw new IllegalStateException ( 
+				"Can't build a parallel flux over a null source, use withSource() or a constructor"
+			);
+			
 			@SuppressWarnings ( "unchecked" )
 			Flux<B> result = this.batchSupplier == null 
 				? (Flux<B>) flux.buffer ( batchSize ) : flux.buffer ( batchSize, batchSupplier );
-
-			if ( visitor != null ) visitor.accept ( this );
 			
 			return result
 			.parallel ( parallelism, parallelismPreFetch )
 			.runOn ( scheduler );
-		}
-		
-		public ParallelFlux<B> build ()
-		{
-			return build ( null );
-		}
-		
+		}		
 	} // class ParallelBatchFluxBuilder
 	
 	
 	/**
-	 * Uses {@link ParallelBatchFluxBuilder} with its defaults, then pass it the visitor as in
-	 * {@link #build(Consumer)} and finally builds a result that batches the source flux.
+	 * Uses {@link ParallelBatchFluxBuilder} with its defaults.
 	 */
-	public static <T> ParallelFlux<List<T>> parallelBatchFlux (
-		Flux<? extends T> flux, Consumer<ParallelBatchFluxBuilder<? super T, ? super List<T>>> visitor
-	)
+	public static <T> ParallelFlux<List<T>> parallelBatchFlux ( Flux<? extends T> flux )
 	{
-		return new ParallelBatchFluxBuilder<T, List<T>> ( flux )
-		.build ( visitor );
-	}
-
-	/**
-	 *	Batches the flux with the default {@link ParallelBatchFluxBuilder}. 
-	 */
-	public static <T> ParallelFlux<List<T>> parallelBatchFlux ( Flux<? extends T> flux ) {
-		return parallelBatchFlux ( flux, null );
+		return new ParallelBatchFluxBuilder<T, List<T>> ( flux ).build ();
 	}
 	
 	
 	/**
-	 * Batches the stream with a {@link ParallelBatchFluxBuilder parallel flux builder} that was
-	 * tweaked using {@link ParallelBatchFluxBuilder#build(Consumer) a builder visitor}. 
+	 * Uses {@link ParallelBatchFluxBuilder} with its defaults.
 	 */
-	public static <T> ParallelFlux<List<T>> parallelBatchFlux (
-		Stream<? extends T> stream, Consumer<ParallelBatchFluxBuilder<? super T, ? super List<T>>> visitor
-	) 
+	public static <T> ParallelFlux<List<T>> parallelBatchFlux ( Stream<? extends T> stream ) 
 	{
-		return new ParallelBatchFluxBuilder<T, List<T>> ( stream ).build ( visitor );
+		return new ParallelBatchFluxBuilder<T, List<T>> ( stream ).build ();
 	}
-
-	public static <T> ParallelFlux<List<T>> parallelBatchFlux ( Stream<? extends T> stream  ) {
-		return parallelBatchFlux ( stream, null );
-	}
-	
-	
+		
 	/**
-	 * Creates a default {@link ParallelBatchFluxBuilder}, pass the visitor to it via 
-	 * {@link ParallelBatchFluxBuilder#build(Consumer)} and returns the built parallel flux. 
+	 * Uses {@link ParallelBatchFluxBuilder} with its defaults.
 	 */
-	public static <T> ParallelFlux<List<T>> parallelBatchFlux (
-		Collection<? extends T> collection, Consumer<ParallelBatchFluxBuilder<? super T, ? super List<T>>> visitor
-	) 
+	public static <T> ParallelFlux<List<T>> parallelBatchFlux ( Collection<? extends T> collection ) 
 	{
-		return new ParallelBatchFluxBuilder<T, List<T>> ( collection ).build ( visitor );
+		return new ParallelBatchFluxBuilder<T, List<T>> ( collection ).build ();
 	}
 	
-	/**
-	 * Batches the collection with the default {@link ParallelBatchFluxBuilder}. 
-	 */
-	public static <T> ParallelFlux<List<T>> parallelBatchFlux ( Collection<? extends T> collection  ) {
-		return parallelBatchFlux ( collection, null );
-	}
 	
 	/**
 	 * Just uses the Reactor methods to make the parallel flux of batches process each batch
