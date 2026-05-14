@@ -1,9 +1,9 @@
 # Revision History
 
-*This file was last revised on 2026-04-21*. **Please keep this note updated**.
+*This file was last revised on 2026-05-14*. **Please keep this note updated**.
 
 ## 16.2.1-SNAPSHOT
-* Current dev version
+* Method `build( visitor )` removed from `ParallelBatchFluxBuilder` (too weird and not very useful), [commit](https://github.com/marco-brandizi/jutils/commit/c2b838a0d).
 
 
 ## 16.2
