@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -11,7 +12,6 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
 
 /**
@@ -70,7 +70,7 @@ public class IdUtils
 		}
 		
 	
-		byte hashBytes[] = messageDigest.digest ( sig.getBytes ( Charsets.UTF_8 ) );
+		byte hashBytes[] = messageDigest.digest ( sig.getBytes ( StandardCharsets.UTF_8 ) );
 		String hash = BaseEncoding.base16 ().lowerCase ().encode ( hashBytes );
 		
 		// log.trace ( "Returning hash '{}' from input '{}'", hash, sig );
