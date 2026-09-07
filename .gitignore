@@ -9,3 +9,4 @@
 /settings.xml
 .DS_Store
 /.vscode
+.claude/
