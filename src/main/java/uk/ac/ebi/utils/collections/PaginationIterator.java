@@ -69,6 +69,22 @@ public class PaginationIterator<P, E> implements Iterator<E>
 	}
 	
 	/**
+	 * Builds an offset-based paginated iterator, where the page selector returns the 
+	 * page element iterator straight.
+	 * 
+	 * This use case is typical of languages like SQL or paginated APIs, where the page selector
+	 * is a query over the current record window.
+	 * 
+	 */	
+	public static <E> PaginationIterator<Iterator<? extends E>, E> offsetBasedElementsIterator (
+	  Function<Long, ? extends Iterator<? extends E>> pageElementsProvider, long pageSize
+	)
+	{
+		return new PaginationIterator<> ( pageElementsProvider, pageSize, Function.identity () );
+	}
+	
+	
+	/**
 	 * @param pageIterator as said above, this provides a new page every time that's needed.
 	 * 
 	 * @param pageElementsProvider as said above, this provides an iterator over the elements
@@ -88,7 +104,8 @@ public class PaginationIterator<P, E> implements Iterator<E>
 	}
 
 	/**
-	 * Builds the page iterator using {@link #offsetBasedPageIterator(Function, long)}.
+	 * Builds the page iterator as offset-based, 
+	 * using {@link #offsetBasedPageIterator(Function, long)}.
 	 */
 	public PaginationIterator (
 		Function<Long, ? extends P> nextPageSelector, long pageSize,
@@ -97,7 +114,7 @@ public class PaginationIterator<P, E> implements Iterator<E>
 	{
 		this ( offsetBasedPageIterator ( nextPageSelector, pageSize ), pageElementsProvider );
 	}
-
+	
 	
 	/**
 	 * See {@link #PaginationIterator(Iterator, Function)} for details on how we loop.

@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 
 import java.util.Iterator;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.stream.IntStream;
 
 import org.junit.Test;
@@ -94,7 +95,7 @@ public class PaginationIteratorTest
 	@Test
 	public void testOffsetBasedPageIterator ()
 	{
-		long npages = 10;
+		int npages = 10;
 		int pgSize = 100;
 		
 		Function<Long, Integer> pgSelector = ofs -> ofs < npages * pgSize ? ofs.intValue () : null;		
@@ -108,6 +109,33 @@ public class PaginationIteratorTest
 			assertEquals ( "Wrong value returned by the pagination iterator (with page selector)!", i++, itr.next () );
 	
 		assertEquals ( "Wrong end value after the iteration (with page selector)", npages * pgSize, (int) i );
+	}
+	
+	@Test
+	public void testOffsetBasedElementsIterator ()
+	{
+		int npages = 10;
+		int pgSize = 100;
+		
+		IntFunction<String> elemProvider = i -> "element " + i;
+		
+		Function<Long, Iterator<String>> pageQuery = ofs -> ofs < npages * pgSize
+			? IntStream.range ( ofs.intValue (), ofs.intValue () + pgSize )
+				.mapToObj ( elemProvider )
+				.iterator ()
+			: null;
+				
+		var itr = PaginationIterator.offsetBasedElementsIterator ( pageQuery, pgSize );
+		
+		Integer i = 0;
+		while ( itr.hasNext () )
+			assertEquals ( "Wrong value returned by the offsetBasedElementsIterator()!", 
+				elemProvider.apply ( i++ ), itr.next () 
+			);
+			
+		assertEquals ( 
+			"Wrong end value after the offsetBasedElementsIterator() iteration", npages * pgSize, (int) i
+		);
 	}
 		
 }
