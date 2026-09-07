@@ -5,14 +5,18 @@ import static reactor.core.scheduler.Schedulers.newBoundedElastic;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+
+import org.reactivestreams.Publisher;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.ParallelFlux;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.concurrent.Queues;
+import uk.ac.ebi.utils.collections.PaginationIterator;
 
 /**
  * Utilities based on the Project Reactor library.
@@ -263,5 +267,76 @@ public class ReactorUtils
 	{
 		batchProcessing ( parallelBatchFlux ( collection ), task );
 	}
+
 	
+	/**
+	 * Helper to emit a {@link Flux} from a paginated source of data.
+	 * 
+	 * TLDR: this is a reactive version of {@link PaginationIterator}, which is obtained by simply 
+	 * combining {@link Flux#from(Publisher)} and {@link Flux#concatMap(Function)}.
+	 * 
+	 * Similarly to {@link PaginationIterator},
+	 * this takes a publisher of pages and a function that yields a publisher of elements for each page, and then
+	 * orchestrates the emission of elements from each page, until the page publisher is exhausted.
+	 * 
+	 * @param <P> the page type
+	 * @param <E> the type of elements that {@code P} pages can provide
+	 * @param pagePublisher a publisher of pages, which is expected to complete when there are no more pages to emit
+	 * @param pageElementsProvider a function that yields a publisher of elements from a page. This publisher too is
+	 * expected to complete when there are no more elements in the page.
+	 * 
+	 * @return a {@link Flux} of elements, which will alternate the switch to a new page, the emission of all the elements
+	 * of the current page and the switch to the next page, until no more pages are available. 
+	 * The resulting flux will complete when the page publisher is exhausted.
+	 */
+	public static <P, E> Flux<E>  pagedFlux ( 
+		Publisher<? extends P> pagePublisher,
+		Function<? super P, ? extends Publisher<? extends E>> pageElementsProvider
+	)
+	{
+		return Flux.from ( pagePublisher )
+			.flatMap ( page -> Flux.from ( pageElementsProvider.apply ( page ) ) );
+	}
+	
+	/**
+	 * A variant of {@link #pagedFlux(Publisher, Function)} 
+	 * based on offset pagination.
+	 * 
+	 * This wraps the result of {@link PaginationIterator#offsetBasedPageIterator(Function, long)} 
+	 * into a {@link Flux} and then calls {@link #pagedFlux(Publisher, Function)}.
+	 * 
+	 * TODO: <b>WARNING</b>: this is not fully reactive, since it uses an iterator to get the pages.
+	 * To be implemented with {@link Flux#generate(Consumer)} or alike.
+	 * 
+	 */
+	public static <P, E> Flux<E> pagedFlux (
+		Function<Long, ? extends P> nextPageSelector,
+		long pageSize,
+		Function<? super P, ? extends Publisher<? extends E>> pageElementsProvider
+	)
+	{
+		Flux<P> pagePublisher = Flux.fromIterable ( 
+			() -> PaginationIterator.offsetBasedPageIterator ( nextPageSelector, pageSize ) 
+		);
+				
+		return pagedFlux ( pagePublisher, pageElementsProvider );
+	}
+	
+	
+	/**
+	 * A variant of {@link #pagedFlux(Function, long, Function)} that uses the page itself 
+	 * as the page selector.
+	 * 
+	 * This is useful in languages like SQL or paginated APIs, where the page selector is 
+	 * a query over the current record window.
+	 * 
+	 * This is the reactive version of {@link PaginationIterator#offsetBasedElementsIterator(Function, long)}.
+	 * 
+	 */
+	public static <P, E> Flux<E> pagedFlux (
+		Function<Long, ? extends Publisher<? extends E>> pageElementsProvider, long pageSize
+	)
+	{
+		return pagedFlux ( pageElementsProvider, pageSize, Function.identity () );
+	}
 }
