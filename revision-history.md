@@ -1,8 +1,10 @@
 # Revision History
 
-*This file was last revised on 2026-05-14*. **Please keep this note updated**.
+*This file was last revised on 2026-09-07*. **Please keep this note updated**.
 
 ## 16.2.1-SNAPSHOT
+* `PaginationIterator.offsetBasedElementsIterator()` helper added.
+* **Experimental** helper `ReactorUtils.pagedFlux()` added.
 * Method `build( visitor )` removed from `ParallelBatchFluxBuilder` (too weird and not very useful), [commit](https://github.com/marco-brandizi/jutils/commit/c2b838a0d).
 
 
